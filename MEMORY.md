@@ -416,3 +416,10 @@ Excluded unless explicitly approved: private leagues, real-money betting, crypto
 - Added the selected favourite team’s crest and country flag to the profile view. Country flags remain visible where a user has supplied a country code.
 - Extended `LocalTime` to scheduled match cards so kickoff times now use the browser’s local timezone and include its abbreviation. The existing client-side prediction lock time already uses the browser clock for presentation while server/database enforcement remains unchanged.
 - Validation: 20 Vitest files / 69 tests, `npm run lint`, `npm run typecheck`, and `npm run build` pass. No schema, RLS, or hosted data changes.
+
+### 2026-07-12 — Final polish: active navigation, app identity, and first-run dashboard
+
+- Added route-aware active states to desktop and mobile navigation with `aria-current` and lime match-night emphasis.
+- Added original Called It ticket SVG icons for browser/app identity and richer root metadata for page titles, descriptions, Open Graph, and Twitter cards.
+- Made the dashboard first-run state data-aware using the authenticated user's prediction count: new users get a focused first-call prompt, while returning users get continuation copy.
+- Validation: 20 Vitest files / 69 tests, `npm run lint`, `npm run typecheck`, and `npm run build` pass. Build retains the existing Next.js middleware deprecation warning. No schema, RLS, or hosted data changes.

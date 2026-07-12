@@ -423,3 +423,10 @@ Excluded unless explicitly approved: private leagues, real-money betting, crypto
 - Added original Called It ticket SVG icons for browser/app identity and richer root metadata for page titles, descriptions, Open Graph, and Twitter cards.
 - Made the dashboard first-run state data-aware using the authenticated user's prediction count: new users get a focused first-call prompt, while returning users get continuation copy.
 - Validation: 20 Vitest files / 69 tests, `npm run lint`, `npm run typecheck`, and `npm run build` pass. Build retains the existing Next.js middleware deprecation warning. No schema, RLS, or hosted data changes.
+
+### 2026-07-12 — Consistent winner/draw prediction controls
+
+- Added a pure prediction-outcome contract and tests for home win, away win, draw, and score adjustment consistency.
+- Updated the prediction form so country flags above each goal count are visibly selectable. Selecting a flag marks that team as the winner and ensures it has more goals; selecting Draw equalizes the scores for a level result, including penalty-decided matches. Editing goals automatically updates the selected outcome.
+- Kept the existing prediction schema, RPC, scoring, and RLS unchanged because the stored scores already deterministically encode the selected outcome; no redundant winner column was introduced.
+- Validation: 21 Vitest files / 71 tests, `npm run lint`, `npm run typecheck`, and `npm run build` pass. Build retains the existing Next.js middleware deprecation warning. No schema or hosted data changes.

@@ -14,6 +14,7 @@ export type MatchResult = {
   actualAwayScore: number;
   firstGoalscorerId: string | null;
   firstGoalWasOwnGoal: boolean;
+  firstGoalscorerKnown?: boolean;
   advancedTeamId?: string | null;
 };
 
@@ -53,11 +54,13 @@ export function calculateScore(
   const isExactScore = prediction.predictedHomeScore === result.actualHomeScore &&
     prediction.predictedAwayScore === result.actualAwayScore;
   const exactScorePoints = isExactScore ? 3 : 0;
-  const isNoGoalscorerCorrect = prediction.predictedNoGoalscorer &&
+  const isNoGoalscorerCorrect = result.firstGoalscorerKnown !== false &&
+    prediction.predictedNoGoalscorer &&
     result.actualHomeScore === 0 &&
     result.actualAwayScore === 0 &&
     result.firstGoalscorerId === null;
-  const isPlayerGoalscorerCorrect = !result.firstGoalWasOwnGoal &&
+  const isPlayerGoalscorerCorrect = result.firstGoalscorerKnown !== false &&
+    !result.firstGoalWasOwnGoal &&
     !prediction.predictedNoGoalscorer &&
     prediction.predictedFirstGoalscorerId !== null &&
     prediction.predictedFirstGoalscorerId === result.firstGoalscorerId;

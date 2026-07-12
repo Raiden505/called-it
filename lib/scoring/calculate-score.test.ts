@@ -76,6 +76,28 @@ describe("calculateScore", () => {
     expect(score.isCalledIt).toBe(true);
   });
 
+  it("does not award scorer points when provider scorer data is unavailable", () => {
+    const score = calculateScore(
+      {
+        predictedHomeScore: 0,
+        predictedAwayScore: 0,
+        predictedFirstGoalscorerId: null,
+        predictedNoGoalscorer: true,
+        confidenceMultiplier: 1,
+      },
+      {
+        actualHomeScore: 0,
+        actualAwayScore: 0,
+        firstGoalscorerId: null,
+        firstGoalWasOwnGoal: false,
+        firstGoalscorerKnown: false,
+      },
+    );
+
+    expect(score.firstGoalscorerPoints).toBe(0);
+    expect(score.isCalledIt).toBe(false);
+  });
+
   it("does not award Called It when the first-goalscorer choice is omitted", () => {
     const score = calculateScore(
       {

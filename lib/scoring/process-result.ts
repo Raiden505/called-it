@@ -34,7 +34,7 @@ export type ProcessResultSummary = {
 
 export async function processMatchResult(
   adminClient: SupabaseClient,
-  input: ResultProcessingInput & { resultCandidateHash?: string },
+  input: ResultProcessingInput & { resultCandidateHash?: string; firstGoalscorerKnown?: boolean },
 ): Promise<ProcessResultSummary> {
   const { data: match, error: matchError } = await adminClient
     .from("matches")
@@ -77,6 +77,7 @@ export async function processMatchResult(
     actualAwayScore: input.awayScore90,
     firstGoalscorerId: input.firstGoalscorerId,
     firstGoalWasOwnGoal: input.firstGoalWasOwnGoal,
+    firstGoalscorerKnown: input.firstGoalscorerKnown,
     advancedTeamId: input.advancedTeamId,
   };
 

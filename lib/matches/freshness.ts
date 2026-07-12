@@ -48,7 +48,8 @@ export function getMatchLifecycleState(
   return { label: "Scheduled", description: "Predictions stay open until kickoff.", tone: "neutral" };
 }
 
-export function getFreshnessLabel(freshness: MatchFreshness): string {
+export function getFreshnessLabel(freshness: MatchFreshness, finalized = false): string {
+  if (finalized) return "Result finalized";
   if (freshness === "fresh") return "Data fresh";
   if (freshness === "stale") return "Data may be out of date";
   return "Awaiting first sync";

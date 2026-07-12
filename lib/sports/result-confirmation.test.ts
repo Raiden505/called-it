@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { observeResultCandidate } from "@/lib/sports/result-confirmation";
 import type { ResultCandidate } from "@/lib/sports/contracts";
 
-const candidate: ResultCandidate = { providerFixtureId: "1", providerStatus: "FINISHED", score90: { home: 1, away: 0 }, scoreFinal: { home: 1, away: 0 }, penaltyScore: null, firstGoalscorerExternalId: "9", firstGoalWasOwnGoal: false, advancedExternalTeamId: null, status: "ready", reviewReason: null, hash: "abc" };
+const candidate: ResultCandidate = { providerFixtureId: "1", providerStatus: "FINISHED", score90: { home: 1, away: 0 }, scoreFinal: { home: 1, away: 0 }, penaltyScore: null, firstGoalscorerExternalId: "9", firstGoalWasOwnGoal: false, firstGoalscorerKnown: true, advancedExternalTeamId: null, status: "ready", reviewReason: null, hash: "abc" };
 
 describe("result confirmation", () => {
   it("requires two identical observations separated by the stabilization window", () => {

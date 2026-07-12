@@ -9,7 +9,7 @@ export function normalizeResultCandidate(fixture: NormalizedFixture): ResultCand
   if (fixture.providerStatus !== "FINISHED") { status = "not_ready"; reviewReason = "fixture_not_finished"; }
   else if (!fixture.score90 || !fixture.scoreFinal) { status = "manual_review"; reviewReason = "regulation_or_final_score_missing"; }
   else if (scoreIsZero && firstGoal) { status = "manual_review"; reviewReason = "zero_score_contains_goal_event"; }
-  else if (!scoreIsZero && !firstGoal) { status = "manual_review"; reviewReason = "non_zero_score_missing_goal_event"; }
-  const candidate = { providerFixtureId: fixture.externalFixtureId, providerStatus: fixture.providerStatus, score90: fixture.score90, scoreFinal: fixture.scoreFinal, penaltyScore: fixture.penaltyScore, firstGoalscorerExternalId: firstGoal?.playerExternalId ?? null, firstGoalWasOwnGoal: firstGoal?.isOwnGoal ?? false, advancedExternalTeamId: fixture.winnerExternalTeamId, status, reviewReason };
+  const firstGoalscorerKnown = firstGoal !== null || scoreIsZero;
+  const candidate = { providerFixtureId: fixture.externalFixtureId, providerStatus: fixture.providerStatus, score90: fixture.score90, scoreFinal: fixture.scoreFinal, penaltyScore: fixture.penaltyScore, firstGoalscorerExternalId: firstGoal?.playerExternalId ?? null, firstGoalWasOwnGoal: firstGoal?.isOwnGoal ?? false, firstGoalscorerKnown, advancedExternalTeamId: fixture.winnerExternalTeamId, status, reviewReason };
   return { ...candidate, hash: createHash("sha256").update(JSON.stringify(candidate)).digest("hex") };
 }

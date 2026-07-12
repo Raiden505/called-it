@@ -8,7 +8,7 @@ export const footballDataTeamSchema = z.object({
 });
 const scoreSchema = z.object({ duration: z.string().nullable().optional(), winner: z.string().nullable().optional(),
   fullTime: z.object({ home: nullableNumber, away: nullableNumber }).optional(), halfTime: z.object({ home: nullableNumber, away: nullableNumber }).optional(),
-  extraTime: z.object({ home: nullableNumber, away: nullableNumber }).optional(), penalties: z.object({ home: nullableNumber, away: nullableNumber }).optional() });
+  regularTime: z.object({ home: nullableNumber, away: nullableNumber }).optional(), extraTime: z.object({ home: nullableNumber, away: nullableNumber }).optional(), penalties: z.object({ home: nullableNumber, away: nullableNumber }).optional() });
 const goalSchema = z.object({ minute: z.number().int().nonnegative().nullable().optional(), injuryTime: z.number().int().nonnegative().nullable().optional(), type: z.enum(["REGULAR", "OWN", "PENALTY"]), team: footballDataTeamSchema, scorer: z.object({ id: z.number().int().positive(), name: z.string().min(1) }).nullable().optional() });
 const playerSchema = z.object({ id: z.number().int().positive(), name: z.string().min(1), position: z.string().nullable().optional(), shirtNumber: z.number().int().positive().nullable().optional() });
 const footballDataMatchTeamSchema = footballDataTeamSchema.extend({ id: z.number().int().positive().nullable(), name: z.string().min(1).nullable(), shortName: z.string().min(1).nullable(), lineup: z.array(playerSchema).optional(), bench: z.array(playerSchema).optional() });

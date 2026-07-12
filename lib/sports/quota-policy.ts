@@ -3,7 +3,7 @@ import type { ProviderStatus } from "@/lib/sports/contracts";
 export type DueWorkItem = { externalId: string; status: "scheduled" | "live" | "finished" | "postponed" | "cancelled"; providerStatus: ProviderStatus | null; nextSyncAt: string | null; syncFailureCount?: number };
 export type SyncQuotaPolicy = { maxFixturesPerRun: number; maxFixturesPerBatch: number; resultReserve: number };
 
-export const defaultSyncQuotaPolicy: SyncQuotaPolicy = { maxFixturesPerRun: 20, maxFixturesPerBatch: 5, resultReserve: 2 };
+export const defaultSyncQuotaPolicy: SyncQuotaPolicy = { maxFixturesPerRun: 8, maxFixturesPerBatch: 4, resultReserve: 2 };
 
 export function prioritizeDueWork(items: DueWorkItem[], now = new Date(), policy = defaultSyncQuotaPolicy): DueWorkItem[] {
   const due = items.filter((item) => !item.nextSyncAt || new Date(item.nextSyncAt).getTime() <= now.getTime()).sort((left, right) => priority(right) - priority(left));

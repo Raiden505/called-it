@@ -79,6 +79,7 @@ export type ResultCandidate = {
   penaltyScore: { home: number; away: number } | null;
   firstGoalscorerExternalId: string | null;
   firstGoalWasOwnGoal: boolean;
+  firstGoalscorerKnown: boolean;
   advancedExternalTeamId: string | null;
   status: "ready" | "not_ready" | "manual_review";
   reviewReason: string | null;

@@ -69,6 +69,15 @@ Excluded unless explicitly approved: private leagues, real-money betting, crypto
 
 ## Completed work log
 
+### 2026-07-12 — Finished-result review backlog root cause fixed
+
+- Production read-only diagnostics confirmed Supabase Cron is active once per minute with 110 successful scheduler executions in the inspected six-hour window. The actual blocker was application logic: 93 football-data fixtures were parked in `manual_review` and excluded from future due-work selection, while only 7 had processed.
+- Corrected the football-data adapter to parse `score.regularTime` for knockout 90-minute scoring and accept the provider's `HOME_TEAM`/`AWAY_TEAM` winner values. The provider currently omits unfolded goal events for these fixtures even when requested, so score/outcome/exact-score points now process without scorer data; first-scorer points and Called It eligibility remain withheld when the scorer is unknown.
+- Manual-review fixtures are now retried on a six-hour backoff instead of being permanently abandoned. Existing null-scheduled review rows will automatically re-enter the bounded cron queue after deployment. The free-tier-aware run cap is 8 fixture requests per run.
+- Finalized matches now show `Result finalized` instead of eventually degrading to `Data may be out of date`; active/unconfirmed fixtures retain the freshness warning.
+- Files changed: football-data schemas/normalizer, result normalization/confirmation contracts, due-work quota and retry flow, deterministic scoring input, match freshness presentation, and focused regression tests. No schema, RLS, secret, or hosted data mutation was required.
+- Validation: focused red/green tests passed; full suite passed with 21 files and 74 tests; `npm run lint`, `npm run typecheck`, and `npm run build` passed. The existing Next.js middleware deprecation warning remains. Production code deployment and post-deploy backlog clearance remain to be verified.
+
 ### 2026-07-12 — Product-flow upgrade Phase 0 started
 
 - Added pure Phase 0 contract modules and tests for recent-outcome curation, result presentation states, Match Desk filter parsing, and adaptive refresh intervals.

@@ -11,7 +11,7 @@ export type DueWorkSummary = { selected: number; processed: number; failed: numb
 export async function syncDueWork(input: { adminClient: SupabaseClient; provider: SportsDataProvider; competition: CompetitionRef; policy?: SyncQuotaPolicy; dryRun?: boolean; now?: Date }): Promise<DueWorkSummary> {
   const now = input.now ?? new Date();
   const policy = input.policy ?? defaultSyncQuotaPolicy;
-  const { data, error } = await input.adminClient.from("matches").select("external_id,status,provider_status,next_sync_at,sync_failure_count,result_processing_status").eq("provider", "football-data").neq("status", "cancelled").neq("result_processing_status", "processed").neq("result_processing_status", "manual_review").not("external_id", "is", null).or(`next_sync_at.is.null,next_sync_at.lte.${now.toISOString()}`).order("next_sync_at", { ascending: true, nullsFirst: true }).limit(policy.maxFixturesPerRun);
+  const { data, error } = await input.adminClient.from("matches").select("external_id,status,provider_status,next_sync_at,sync_failure_count,result_processing_status").eq("provider", "football-data").neq("status", "cancelled").neq("result_processing_status", "processed").not("external_id", "is", null).or(`next_sync_at.is.null,next_sync_at.lte.${now.toISOString()}`).order("next_sync_at", { ascending: true, nullsFirst: true }).limit(policy.maxFixturesPerRun);
   if (error) throw new Error(`Could not select due sports work: ${error.message}`);
   const items = prioritizeDueWork((data ?? []).map((row) => ({ externalId: row.external_id as string, status: row.status, providerStatus: row.provider_status, nextSyncAt: row.next_sync_at, syncFailureCount: row.sync_failure_count ?? 0 })), now, policy);
   if (input.dryRun) return { selected: items.length, processed: 0, failed: 0, skipped: 0, resultsProcessed: 0, syncRunIds: [], dryRun: true };
@@ -51,19 +51,20 @@ async function processAutomaticResult(client: SupabaseClient, fixture: Normalize
   if (error || !match) return false;
   const observation = observeResultCandidate({ hash: match.result_candidate_hash, seenAt: match.result_candidate_seen_at, observations: match.result_candidate_observations, status: match.result_processing_status }, candidate, now);
   if (observation.status !== "confirmed") {
-    await client.from("matches").update({ result_candidate_hash: observation.hash, result_candidate_seen_at: observation.seenAt, result_candidate_observations: observation.observations, result_processing_status: observation.status, next_sync_at: observation.status === "manual_review" ? null : new Date(now.getTime() + 90_000).toISOString() }).eq("id", match.id);
+    const retryAt = observation.status === "manual_review" ? new Date(now.getTime() + 6 * 60 * 60 * 1000).toISOString() : new Date(now.getTime() + 90_000).toISOString();
+    await client.from("matches").update({ result_candidate_hash: observation.hash, result_candidate_seen_at: observation.seenAt, result_candidate_observations: observation.observations, result_processing_status: observation.status, sync_last_error_code: candidate.reviewReason, next_sync_at: retryAt }).eq("id", match.id);
     return false;
   }
   const firstGoalscorerId = await resolveProviderId(client, "players", candidate.firstGoalscorerExternalId);
   const advancedTeamId = await resolveProviderId(client, "teams", candidate.advancedExternalTeamId);
   if (candidate.firstGoalscorerExternalId && !firstGoalscorerId || candidate.advancedExternalTeamId && !advancedTeamId) {
-    await client.from("matches").update({ result_processing_status: "manual_review", sync_last_error_code: "result_entity_unmapped", next_sync_at: null }).eq("id", match.id);
+    await client.from("matches").update({ result_processing_status: "manual_review", sync_last_error_code: "result_entity_unmapped", next_sync_at: new Date(now.getTime() + 6 * 60 * 60 * 1000).toISOString() }).eq("id", match.id);
     return false;
   }
   await client.from("matches").update({ result_processing_status: "processing" }).eq("id", match.id);
   try {
-    await processMatchResult(client, { matchId: match.id, homeScore90: candidate.score90!.home, awayScore90: candidate.score90!.away, homeScoreFinal: candidate.scoreFinal?.home ?? null, awayScoreFinal: candidate.scoreFinal?.away ?? null, firstGoalscorerId, firstGoalWasOwnGoal: candidate.firstGoalWasOwnGoal, advancedTeamId, resultCandidateHash: candidate.hash });
-    await client.from("matches").update({ result_candidate_hash: candidate.hash, result_candidate_seen_at: observation.seenAt, result_candidate_observations: observation.observations, result_processing_status: "processed", next_sync_at: null }).eq("id", match.id);
+    await processMatchResult(client, { matchId: match.id, homeScore90: candidate.score90!.home, awayScore90: candidate.score90!.away, homeScoreFinal: candidate.scoreFinal?.home ?? null, awayScoreFinal: candidate.scoreFinal?.away ?? null, firstGoalscorerId, firstGoalWasOwnGoal: candidate.firstGoalWasOwnGoal, firstGoalscorerKnown: candidate.firstGoalscorerKnown, advancedTeamId, resultCandidateHash: candidate.hash });
+    await client.from("matches").update({ result_candidate_hash: candidate.hash, result_candidate_seen_at: observation.seenAt, result_candidate_observations: observation.observations, result_processing_status: "processed", sync_last_error_code: null, next_sync_at: null }).eq("id", match.id);
     return true;
   } catch (processingError) {
     await client.from("matches").update({ result_processing_status: "failed", sync_last_error_code: processingError instanceof Error ? processingError.name : "result_processing_failed", next_sync_at: retryAt(0, now) }).eq("id", match.id);

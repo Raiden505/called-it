@@ -17,5 +17,6 @@ describe("match lifecycle labels", () => {
     expect(getFreshnessLabel("fresh")).toBe("Data fresh");
     expect(getFreshnessLabel("stale")).toBe("Data may be out of date");
     expect(getFreshnessLabel("unknown")).toBe("Awaiting first sync");
+    expect(getFreshnessLabel("stale", true)).toBe("Result finalized");
   });
 });

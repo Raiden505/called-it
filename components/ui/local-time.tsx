@@ -2,12 +2,14 @@
 
 import { useSyncExternalStore } from "react";
 
-type LocalTimeProps = { date: string; mode?: "time" | "datetime"; className?: string };
+type LocalTimeProps = { date: string; mode?: "time" | "datetime" | "match"; className?: string };
 
 function formatDate(date: string, timeZone: string | undefined, mode: LocalTimeProps["mode"] = "time") {
-  const options = mode === "datetime"
-    ? { dateStyle: "medium" as const, timeStyle: "short" as const, timeZone }
-    : { hour: "numeric" as const, minute: "2-digit" as const, timeZone, timeZoneName: "short" as const };
+  const options = mode === "match"
+    ? { weekday: "short" as const, month: "short" as const, day: "numeric" as const, hour: "numeric" as const, minute: "2-digit" as const, timeZone, timeZoneName: "short" as const }
+    : mode === "datetime"
+      ? { dateStyle: "medium" as const, timeStyle: "short" as const, timeZone }
+      : { hour: "numeric" as const, minute: "2-digit" as const, timeZone, timeZoneName: "short" as const };
   return new Intl.DateTimeFormat(undefined, options).format(new Date(date));
 }
 

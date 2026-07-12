@@ -408,3 +408,11 @@ Excluded unless explicitly approved: private leagues, real-money betting, crypto
 - Replaced the profile country-code text field with a searchable native datalist picker backed by ISO country names/codes, a clear action, hidden normalized country code, and live flag preview. Added the picker to onboarding and profile editing, and added the saved flag chip to the profile view.
 - Validation: 21 Vitest files / 70 tests, `npm run lint`, `npm run typecheck`, and `npm run build` pass. Build retains the existing Next.js middleware deprecation warning. Authenticated visual browser QA remains unverified in this environment.
 - No database schema or RLS changes. Country values remain server-validated and profile updates continue through the existing Supabase-authenticated action.
+
+### 2026-07-12 — Favourite-team picker and match-time correction
+
+- Supersedes the searchable-country-picker decision above: the intended friction was the large favourite-team crest grid, not country selection. Removed the country search module and restored the compact two-letter country-code field in profile details.
+- Added a compact searchable favourite-team picker for onboarding and profile editing. It initially shows only the selected crest; searching by team or country returns up to eight crest-and-flag choices, avoiding a long scroll through every team.
+- Added the selected favourite team’s crest and country flag to the profile view. Country flags remain visible where a user has supplied a country code.
+- Extended `LocalTime` to scheduled match cards so kickoff times now use the browser’s local timezone and include its abbreviation. The existing client-side prediction lock time already uses the browser clock for presentation while server/database enforcement remains unchanged.
+- Validation: 20 Vitest files / 69 tests, `npm run lint`, `npm run typecheck`, and `npm run build` pass. No schema, RLS, or hosted data changes.

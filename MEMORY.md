@@ -69,6 +69,14 @@ Excluded unless explicitly approved: private leagues, real-money betting, crypto
 
 ## Completed work log
 
+### 2026-07-13 — Stuck-in-review result processing fixed
+
+- Root cause of "Official result under review" for finished football-data.org fixtures with valid scores: `lib/sports/due-work-service.ts` forced a confirmed result into `manual_review` whenever the provider's first-goalscorer external ID was not present in the local `players` table. Because squad hydration is opt-in (`FOOTBALL_DATA_SYNC_SQUADS=true`, default false) and goal scorers are not always in the imported lineups/bench for every fixture, confirmed results with a known-but-unmapped scorer never reached scoring, so users with predictions stayed unscored indefinitely and the matches page showed the under-review state.
+- Extracted the entity-resolution decision into a pure, exported helper `decideScoreReconciliation` in `lib/sports/due-work-service.ts`. An unmapped first-goalscorer is no longer fatal: the match is processed with `firstGoalscorerId: null` and `firstGoalscorerKnown` from the candidate, so outcome/goal-difference/exact-score points still score deterministically, first-goalscorer points are withheld, and Called It eligibility is correctly suppressed by `calculateScore`. An unmapped advancing team still blocks (the fixture's own home/away teams are always synced with the match, so this is a real data error). The non-blocking first-scorer warning is recorded in `sync_last_error_code` as `first_goalscorer_unmapped` for observability.
+- Existing manual-review fixtures stuck on `result_entity_unmapped` will re-enter the cron queue on their six-hour backoff and process on the next run after deployment.
+- Files changed: `lib/sports/due-work-service.ts`, `lib/sports/score-reconciliation.test.ts` (new), `MEMORY.md`. No schema, RLS, secret, or hosted-data mutation was required. Reconciliation behavior is unchanged when the provider omits goal events entirely (those fixtures already processed).
+- Validation: 5 new reconciliation tests passed; full suite passed with 22 files and 79 tests; `npm run typecheck`, `npm run lint`, and `npm run build` passed. Production deployment, post-deploy backlog verification, and touched-up `result_entity_unmapped` row auditing remain operational follow-ups.
+
 ### 2026-07-12 — Finished-result review backlog root cause fixed
 
 - Production read-only diagnostics confirmed Supabase Cron is active once per minute with 110 successful scheduler executions in the inspected six-hour window. The actual blocker was application logic: 93 football-data fixtures were parked in `manual_review` and excluded from future due-work selection, while only 7 had processed.

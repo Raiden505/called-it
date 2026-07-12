@@ -1,10 +1,29 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { CompetitionRef, NormalizedFixture, SportsDataProvider } from "@/lib/sports/contracts";
+import type { CompetitionRef, NormalizedFixture, ResultCandidate, SportsDataProvider } from "@/lib/sports/contracts";
 import { defaultSyncQuotaPolicy, prioritizeDueWork, retryAt, type DueWorkItem, type SyncQuotaPolicy } from "@/lib/sports/quota-policy";
 import { syncCompetition } from "@/lib/sports/sync-service";
 import { normalizeResultCandidate } from "@/lib/sports/result-normalizer";
 import { observeResultCandidate } from "@/lib/sports/result-confirmation";
 import { processMatchResult } from "@/lib/scoring/process-result";
+
+export type ScoreReconciliationDecision = {
+  firstGoalscorerId: string | null;
+  advancedTeamId: string | null;
+  blocked: boolean;
+  warningCode: string | null;
+};
+
+export function decideScoreReconciliation(
+  candidate: Pick<ResultCandidate, "firstGoalscorerExternalId" | "advancedExternalTeamId">,
+  resolved: { firstGoalscorer: string | null; advancedTeam: string | null },
+): ScoreReconciliationDecision {
+  const scorerUnmapped = Boolean(candidate.firstGoalscorerExternalId) && resolved.firstGoalscorer === null;
+  const advancedUnmapped = Boolean(candidate.advancedExternalTeamId) && resolved.advancedTeam === null;
+  const firstGoalscorerId = scorerUnmapped ? null : resolved.firstGoalscorer;
+  if (advancedUnmapped) return { firstGoalscorerId, advancedTeamId: null, blocked: true, warningCode: "result_entity_unmapped" };
+  if (scorerUnmapped) return { firstGoalscorerId, advancedTeamId: resolved.advancedTeam, blocked: false, warningCode: "first_goalscorer_unmapped" };
+  return { firstGoalscorerId, advancedTeamId: resolved.advancedTeam, blocked: false, warningCode: null };
+}
 
 export type DueWorkSummary = { selected: number; processed: number; failed: number; skipped: number; resultsProcessed: number; syncRunIds: string[]; dryRun: boolean };
 
@@ -55,16 +74,18 @@ async function processAutomaticResult(client: SupabaseClient, fixture: Normalize
     await client.from("matches").update({ result_candidate_hash: observation.hash, result_candidate_seen_at: observation.seenAt, result_candidate_observations: observation.observations, result_processing_status: observation.status, sync_last_error_code: candidate.reviewReason, next_sync_at: retryAt }).eq("id", match.id);
     return false;
   }
-  const firstGoalscorerId = await resolveProviderId(client, "players", candidate.firstGoalscorerExternalId);
-  const advancedTeamId = await resolveProviderId(client, "teams", candidate.advancedExternalTeamId);
-  if (candidate.firstGoalscorerExternalId && !firstGoalscorerId || candidate.advancedExternalTeamId && !advancedTeamId) {
-    await client.from("matches").update({ result_processing_status: "manual_review", sync_last_error_code: "result_entity_unmapped", next_sync_at: new Date(now.getTime() + 6 * 60 * 60 * 1000).toISOString() }).eq("id", match.id);
+  const reconciliation = decideScoreReconciliation(
+    { firstGoalscorerExternalId: candidate.firstGoalscorerExternalId, advancedExternalTeamId: candidate.advancedExternalTeamId },
+    { firstGoalscorer: await resolveProviderId(client, "players", candidate.firstGoalscorerExternalId), advancedTeam: await resolveProviderId(client, "teams", candidate.advancedExternalTeamId) },
+  );
+  if (reconciliation.blocked) {
+    await client.from("matches").update({ result_processing_status: "manual_review", sync_last_error_code: reconciliation.warningCode, next_sync_at: new Date(now.getTime() + 6 * 60 * 60 * 1000).toISOString() }).eq("id", match.id);
     return false;
   }
   await client.from("matches").update({ result_processing_status: "processing" }).eq("id", match.id);
   try {
-    await processMatchResult(client, { matchId: match.id, homeScore90: candidate.score90!.home, awayScore90: candidate.score90!.away, homeScoreFinal: candidate.scoreFinal?.home ?? null, awayScoreFinal: candidate.scoreFinal?.away ?? null, firstGoalscorerId, firstGoalWasOwnGoal: candidate.firstGoalWasOwnGoal, firstGoalscorerKnown: candidate.firstGoalscorerKnown, advancedTeamId, resultCandidateHash: candidate.hash });
-    await client.from("matches").update({ result_candidate_hash: candidate.hash, result_candidate_seen_at: observation.seenAt, result_candidate_observations: observation.observations, result_processing_status: "processed", sync_last_error_code: null, next_sync_at: null }).eq("id", match.id);
+    await processMatchResult(client, { matchId: match.id, homeScore90: candidate.score90!.home, awayScore90: candidate.score90!.away, homeScoreFinal: candidate.scoreFinal?.home ?? null, awayScoreFinal: candidate.scoreFinal?.away ?? null, firstGoalscorerId: reconciliation.firstGoalscorerId, firstGoalWasOwnGoal: candidate.firstGoalWasOwnGoal, firstGoalscorerKnown: candidate.firstGoalscorerKnown, advancedTeamId: reconciliation.advancedTeamId, resultCandidateHash: candidate.hash });
+    await client.from("matches").update({ result_candidate_hash: candidate.hash, result_candidate_seen_at: observation.seenAt, result_candidate_observations: observation.observations, result_processing_status: "processed", sync_last_error_code: reconciliation.warningCode, next_sync_at: null }).eq("id", match.id);
     return true;
   } catch (processingError) {
     await client.from("matches").update({ result_processing_status: "failed", sync_last_error_code: processingError instanceof Error ? processingError.name : "result_processing_failed", next_sync_at: retryAt(0, now) }).eq("id", match.id);

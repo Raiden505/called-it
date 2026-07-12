@@ -399,3 +399,12 @@ Excluded unless explicitly approved: private leagues, real-money betting, crypto
 - Added View profile, Profile settings, favourite-team context, and server-side Log out actions to the account area. Logout uses the existing Supabase server client and redirects to `/login`.
 - Removed the abbreviated `HM`, `MX`, `RK`, `FR`, and `PR` navigation labels while preserving readable navigation labels and icons.
 - Validation: tests (20 files / 69 tests), lint, typecheck, and production build all pass.
+
+### 2026-07-12 — Auth-aware landing, local timestamps, and searchable country profiles
+
+- Product/TDD requirements addressed: display provider freshness in the viewer's local timezone, keep authenticated navigation oriented toward the dashboard, reduce onboarding/profile country-selection friction, and show profile country flags.
+- Added a browser-local `LocalTime` primitive with an explicit timezone abbreviation and UTC server snapshot to avoid hydration mismatches. Match freshness and refresh-check timestamps now use it.
+- The public landing page now checks the Supabase session server-side: signed-in users see Dashboard/Open your dashboard actions and signed-out users see Sign in/Get started.
+- Replaced the profile country-code text field with a searchable native datalist picker backed by ISO country names/codes, a clear action, hidden normalized country code, and live flag preview. Added the picker to onboarding and profile editing, and added the saved flag chip to the profile view.
+- Validation: 21 Vitest files / 70 tests, `npm run lint`, `npm run typecheck`, and `npm run build` pass. Build retains the existing Next.js middleware deprecation warning. Authenticated visual browser QA remains unverified in this environment.
+- No database schema or RLS changes. Country values remain server-validated and profile updates continue through the existing Supabase-authenticated action.
